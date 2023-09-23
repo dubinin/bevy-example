@@ -7,6 +7,10 @@ edition = "2021"
 # Remember to revert dynamic_linking before releasing your game
 # https://bevyengine.org/learn/book/getting-started/setup/#enable-fast-compiles-optional
 bevy = { version = "0.11.2", features = ["dynamic_linking"] }
+bevy_rapier2d = { version = "0.22.0", features = ["simd-stable", "debug-render-2d"] }
+
+[profile.release]
+codegen-units = 1
 
 # Enable a small amount of optimization in debug mode
 [profile.dev]

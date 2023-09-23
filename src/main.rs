@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy::sprite::MaterialMesh2dBundle;
+use bevy_rapier2d::prelude::*;
 
 #[derive(Component)]
 struct Ball;
@@ -8,25 +9,9 @@ struct Ball;
 struct GameTimer(Timer);
 
 const FLOOR_Y: f32 = -200.;
-const FLOOR_HEIGHT: f32 = 40.0;
-const BALL_SPEED: f32 = 45.;
+const FLOOR_HEIGHT: f32 = 40.;
+const FLOOR_WEIGHT: f32 = 400.;
 const BALL_RADIUS: f32 = 50.;
-const BALL_STOP_HEIGHT: f32 = FLOOR_Y + FLOOR_HEIGHT / 2.0 + BALL_RADIUS;
-
-fn move_ball(
-    mut commands: Commands,
-    time: Res<Time>,
-    mut query: Query<(Entity, &mut Transform), With<Ball>>,
-) {
-    for (entity, mut transform) in query.iter_mut() {
-        if transform.translation.y < BALL_STOP_HEIGHT {
-            commands.entity(entity).remove::<Ball>();
-            info!("Ball at floor!");
-        } else {
-            transform.translation.y -= BALL_SPEED * time.delta_seconds();
-        }
-    }
-}
 
 fn setup(
     mut commands: Commands,
@@ -45,15 +30,33 @@ fn setup(
             transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
             ..default()
         },
+        // Physics
+        RigidBody::Dynamic,
+        Collider::ball(BALL_RADIUS),
+        LockedAxes::ROTATION_LOCKED,
     ));
 
     // Floor
-    commands.spawn(MaterialMesh2dBundle {
-        mesh: meshes.add(shape::Box::new(400., 40., 0.).into()).into(),
-        material: materials.add(ColorMaterial::from(Color::BLACK)),
-        transform: Transform::from_translation(Vec3::new(0., FLOOR_Y, 1.)),
-        ..default()
-    });
+    commands.spawn((
+        MaterialMesh2dBundle {
+            mesh: meshes
+                .add(shape::Box::new(FLOOR_WEIGHT, FLOOR_HEIGHT, 0.).into())
+                .into(),
+            material: materials.add(ColorMaterial::from(Color::BLACK)),
+            transform: Transform::from_translation(Vec3::new(0., FLOOR_Y, 1.)),
+            ..default()
+        },
+        // Physics
+        Collider::cuboid(FLOOR_WEIGHT / 2., FLOOR_HEIGHT / 2.),
+        Restitution {
+            coefficient: 1.15,
+            ..Default::default()
+        },
+        Friction {
+            coefficient: 0.,
+            ..Default::default()
+        },
+    ));
 }
 
 pub struct GamePlugin;
@@ -61,11 +64,20 @@ pub struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(GameTimer(Timer::from_seconds(2.0, TimerMode::Repeating)))
-            .add_systems(Startup, setup)
-            .add_systems(Update, move_ball);
+            .add_systems(Startup, setup);
     }
 }
 
 fn main() {
-    App::new().add_plugins((DefaultPlugins, GamePlugin)).run();
+    let mut app = App::new();
+    app.add_plugins(RapierPhysicsPlugin::<()>::default());
+    app.add_plugins((DefaultPlugins, GamePlugin));
+
+    #[cfg(debug_assertions)]
+    app.add_plugins(RapierDebugRenderPlugin {
+        mode: DebugRenderMode::all(),
+        ..Default::default()
+    });
+
+    app.run();
 }
