@@ -5,9 +5,6 @@ use bevy_rapier2d::prelude::*;
 #[derive(Component)]
 struct Ball;
 
-#[derive(Resource)]
-struct GameTimer(Timer);
-
 const FLOOR_Y: f32 = -200.;
 const FLOOR_HEIGHT: f32 = 40.;
 const FLOOR_WEIGHT: f32 = 400.;
@@ -59,12 +56,22 @@ fn setup(
     ));
 }
 
+fn keyboard_input(keys: Res<Input<KeyCode>>, mut query: Query<&mut Transform, With<Ball>>) {
+    if keys.just_pressed(KeyCode::Space) {
+        info!("Space was pressed!");
+        for mut transform in query.iter_mut() {
+            // Reset ball position on Space button press
+            transform.translation.y = 0.;
+        }
+    }
+}
+
 pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(GameTimer(Timer::from_seconds(2.0, TimerMode::Repeating)))
-            .add_systems(Startup, setup);
+        app.add_systems(Startup, setup)
+            .add_systems(Update, keyboard_input);
     }
 }
 
