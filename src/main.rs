@@ -29,6 +29,7 @@ fn setup(
         },
         // Physics
         RigidBody::Dynamic,
+        ExternalImpulse::default(),
         Collider::ball(BALL_RADIUS),
         LockedAxes::ROTATION_LOCKED,
     ));
@@ -56,12 +57,28 @@ fn setup(
     ));
 }
 
-fn keyboard_input(keys: Res<Input<KeyCode>>, mut query: Query<&mut Transform, With<Ball>>) {
-    if keys.just_pressed(KeyCode::Space) {
-        info!("Space was pressed!");
+fn handle_debug_commands(keys: Res<Input<KeyCode>>, mut query: Query<&mut Transform, With<Ball>>) {
+    if keys.just_pressed(KeyCode::Key0) {
+        info!("Reset ball position");
         for mut transform in query.iter_mut() {
-            // Reset ball position on Space button press
             transform.translation.y = 0.;
+        }
+    }
+}
+
+fn move_ball_system(keys: Res<Input<KeyCode>>, mut query: Query<&mut ExternalImpulse, With<Ball>>) {
+    for mut impulse in query.iter_mut() {
+        if keys.pressed(KeyCode::D) {
+            // Move ball to right
+            impulse.impulse = Vec2::new(10000., 0.);
+        }
+        if keys.pressed(KeyCode::A) {
+            // Move ball to left
+            impulse.impulse = Vec2::new(-10000., 0.);
+        }
+        if keys.just_pressed(KeyCode::W) {
+            // Move ball up
+            impulse.impulse = Vec2::new(0., 1000000.);
         }
     }
 }
@@ -71,7 +88,8 @@ pub struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup)
-            .add_systems(Update, keyboard_input);
+            .add_systems(Update, handle_debug_commands)
+            .add_systems(Update, move_ball_system);
     }
 }
 
