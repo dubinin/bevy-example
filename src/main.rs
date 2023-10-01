@@ -28,8 +28,11 @@ fn setup(
             ..default()
         },
         // Physics
-        RigidBody::Dynamic,
-        ExternalImpulse::default(),
+        RigidBody::KinematicPositionBased,
+        KinematicCharacterController {
+            offset: CharacterLength::Absolute(0.05),
+            ..default()
+        },
         Collider::ball(BALL_RADIUS),
         LockedAxes::ROTATION_LOCKED,
     ));
@@ -66,20 +69,24 @@ fn handle_debug_commands(keys: Res<Input<KeyCode>>, mut query: Query<&mut Transf
     }
 }
 
-fn move_ball_system(keys: Res<Input<KeyCode>>, mut query: Query<&mut ExternalImpulse, With<Ball>>) {
-    for mut impulse in query.iter_mut() {
+fn ball_move_system(
+    time: Res<Time>,
+    keys: Res<Input<KeyCode>>,
+    mut query: Query<&mut KinematicCharacterController, With<Ball>>,
+) {
+    for mut controller in query.iter_mut() {
+        let mut x: f32 = 0.;
+        // Gravity
+        let y: f32 = -300. * time.delta_seconds();
         if keys.pressed(KeyCode::D) {
             // Move ball to right
-            impulse.impulse = Vec2::new(10000., 0.);
+            x += 300.;
         }
         if keys.pressed(KeyCode::A) {
             // Move ball to left
-            impulse.impulse = Vec2::new(-10000., 0.);
+            x -= 300.;
         }
-        if keys.just_pressed(KeyCode::W) {
-            // Move ball up
-            impulse.impulse = Vec2::new(0., 1000000.);
-        }
+        controller.translation = Some(Vec2::new(x * time.delta_seconds(), y));
     }
 }
 
@@ -89,7 +96,7 @@ impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup)
             .add_systems(Update, handle_debug_commands)
-            .add_systems(Update, move_ball_system);
+            .add_systems(Update, (ball_move_system,));
     }
 }
 
